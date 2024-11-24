@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animal Categories</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .category-container {
+            margin: 20px 0;
+            width: 100%;
+            max-width: 1200px;
+        }
+        .category-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .animal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .animal-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            text-align: center;
+        }
+        .animal-card img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .animal-card p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+
+
+        .category-container[data-category="Dogs"] .animal-card p.name {
+        font-weight: bold;
+    }
+
+    .category-container[data-category="BigFish"] .animal-card p.name {
+        font-weight: bold;
+        font-style: italic;
+        color: blue;
+    }
+
+
+
+        #addAnimalForm {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #addAnimalForm input, #addAnimalForm button {
+            padding: 10px;
+            font-size: 14px;
+        }
+        #addAnimalForm input {
+            flex: 1;
+            min-width: 200px;
+        }
+        #addAnimalForm button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #addAnimalForm button:hover {
+            background-color: #0056b3;
+        }
+        #errorMessage {
+            color: red;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .sort-buttons {
+            display: flex;
+            justify-content: space-evenly;
+            margin: 10px 0;
+        }
+        .sort-button {
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .sort-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <form id="addAnimalForm">
+        <input type="text" id="animalName" placeholder="Name of the animal is" required>
+        <input type="text" id="animalSpecies" placeholder="Species of the animal" required>
+        <input type="text" id="animalSize" placeholder="Size of the animal in ft" required> 
+        <input type="text" id="animalLocation" placeholder="Location(where is it found)" required>
+        <input type="url" id="animalImage" placeholder="Image URL (optional) if want to add its image">
+        <input type="text" id="animalCategory" placeholder="Category (e.g:BigCats)" required>
+        <button type="submit">Add Animal</button>
+    </form>
+    <div id="errorMessage" style="color: red; display: none;">Error is that the:Animal already exists</div>
+    <div class="container" id="app"></div>
+
+    <script>
+        class Animal {
+            //specific fileds of Animal feature
+            constructor(species, name, size, location, image) {
+                    this.species = species;
+                this.name = name;
+                    this.size = size;
+                this.location = location;
+                    this.image = image || "https://lh7-rt.googleusercontent.com/docsz/AD_4nXfwMItlotMw_ryxi-rv3TKh2CObExG8QzZaQtcqW6lEJHQBpy9UtRnqtqKE0mWYeoH5v4ZjiJZcfUWe-4QzuWi0t7-qZ88SzpkDdKN7IC8X_y6GkrZLOei10n6laogI9Io6rgqKhQ?key=diMK_80ckKTiDYYhCkLD1Q";
+            }
+
+            createAnimalDiv(onEdit, onDelete) {
+    const animalDiv = document.createElement('div');
+    animalDiv.classList.add('animal-card');
+
+    const speciesElement = document.createElement('p');
+    speciesElement.textContent = `Species: ${this.species}`
+    animalDiv.appendChild(speciesElement);
+
+    const nameElement = document.createElement('p');
+    nameElement.classList.add('name');
+    nameElement.textContent = `Name: ${this.name}`;
+    animalDiv.appendChild(nameElement);
+
+    const sizeElement = document.createElement('p');
+    sizeElement.textContent = `Size: ${this.size}`;
+    animalDiv.appendChild(sizeElement);
+
+    const locationElement = document.createElement('p');
+    locationElement.textContent = `Location: ${this.location}`;
+    animalDiv.appendChild(locationElement);
+
+    const imageElement = document.createElement('img');
+    imageElement.src = this.image;
+    animalDiv.appendChild(imageElement);
+
+    const editButton = document.createElement('button');
+    editButton.textContent = 'Edit';
+    editButton.onclick = () => onEdit(this);
+    animalDiv.appendChild(editButton);
+
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete';
+    deleteButton.onclick = () => onDelete(this);
+    animalDiv.appendChild(deleteButton);
+
+    return animalDiv;
+}
+        }
+
+        const categories = {};
+        const appContainer = document.getElementById('app');
+
+        function renderCategory(categoryName, animals) {
+            //helps us query a certain category of div
+            let categoryDiv = document.querySelector(`.category-container[data-category="${categoryName}"]`);
+            if (!categoryDiv) {
+                categoryDiv = document.createElement('div');
+                categoryDiv.classList.add('category-container');
+                categoryDiv.dataset.category = categoryName;
+
+                const title = document.createElement('div');
+                title.classList.add('category-title');
+                title.textContent = categoryName;
+                categoryDiv.appendChild(title);
+
+                const sortButtons = document.createElement('div');
+                sortButtons.classList.add('sort-buttons');
+
+                const nameSortButton = document.createElement('button');
+                nameSortButton.classList.add('sort-button');
+                nameSortButton.textContent = 'Sort by Name';
+                nameSortButton.onclick = () => sortAnimals(categoryName, 'name');
+                sortButtons.appendChild(nameSortButton);
+
+                const speciesSortButton = document.createElement('button');
+                speciesSortButton.classList.add('sort-button');
+                speciesSortButton.textContent = 'Sort by Species';
+                speciesSortButton.onclick = () => sortAnimals(categoryName, 'species');
+                sortButtons.appendChild(speciesSortButton);
+
+                const sizeSortButton = document.createElement('button');
+                sizeSortButton.classList.add('sort-button');
+                sizeSortButton.textContent = 'Sort by Size';
+                sizeSortButton.onclick = () => sortAnimals(categoryName, 'size');
+                sortButtons.appendChild(sizeSortButton);
+
+                categoryDiv.appendChild(sortButtons);
+
+                const grid = document.createElement('div');
+                grid.classList.add('animal-grid');
+                categoryDiv.appendChild(grid);
+                appContainer.appendChild(categoryDiv);
+            }
+
+            const grid = categoryDiv.querySelector('.animal-grid');
+            grid.innerHTML = '';
+            animals.forEach(animal => {
+                const animalCard = animal.createAnimalDiv(
+                    (editedAnimal) => editAnimal(categoryName, editedAnimal),
+                    (deletedAnimal) => deleteAnimal(categoryName, deletedAnimal)
+                );
+                grid.appendChild(animalCard);
+            });
+        }
+
+        function renderAllCategory() {
+            appContainer.innerHTML = '';
+            for (const [category, animals] of Object.entries(categories)) {
+                renderCategory(category, animals);
+            }
+        }
+
+        function editAnimal(category, animal) {
+            const name = prompt("Enter new name", animal.name);
+            const species = prompt("Enter new species", animal.species);
+            const size = prompt("Enter new size", animal.size);
+            const location = prompt("Enter new location", animal.location);
+            const image = prompt("Enter new image URL", animal.image);
+
+            if (name && species && size && location && image) {
+                animal.name = name;
+                animal.species = species;
+                animal.size = size;
+                animal.location = location;
+                animal.image = image;
+                renderAllCategory();
+            }
+        }
+
+        function deleteAnimal(category, animal) {
+            categories[category] = categories[category].filter(a => a !== animal);
+            renderAllCategory();
+        }
+
+        function sortAnimals(categoryName, sortBy) {
+            categories[categoryName].sort((a, b) => {
+                if (sortBy === 'name') {
+                    return a.name.localeCompare(b.name);
+                } else if (sortBy === 'species') {
+                    return a.species.localeCompare(b.species);
+                } else if (sortBy === 'size') {
+                    const sizeA = parseFloat(a.size);
+                    const sizeB = parseFloat(b.size);
+                    return sizeA - sizeB;
+                }
+            });
+            renderCategory(categoryName, categories[categoryName]);
+        }
+
+        const form = document.getElementById('addAnimalForm');
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            const name = document.getElementById('animalName').value;
+            const species = document.getElementById('animalSpecies').value;
+            const size = document.getElementById('animalSize').value;
+            const location = document.getElementById('animalLocation').value;
+            const image = document.getElementById('animalImage').value;
+            const category = document.getElementById('animalCategory').value;
+
+            const existingCategory = categories[category] || [];
+            if (existingCategory.some(a => a.name === name)) {
+                document.getElementById('errorMessage').style.display = 'block';
+                return;
+            }
+
+            const newAnimal = new Animal(species, name, size, location, image);
+            categories[category] = [...existingCategory, newAnimal];
+
+            renderAllCategory();
+            form.reset();
+            document.getElementById('errorMessage').style.display = 'none';
+        };
+
+        // Initialize with some example data
+        const data ={
+    "BigCats": [
+        {
+            "species": "Big Cats",
+            "name": "Tiger",
+            "size": "10 ft",
+            "location": "Asia",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXeWG1C6iuBi7hnks-TKpv2ETny0x-FA6a39SBSScd9PFP5p4lTmCbtehtCZJ6FFsLlAsamoQ9eO39FeIxsLTCoGylVNga5KDbh8ErbOeyQDXRBuJjqxiig8u5nwZH1AAd9rro5qow?key=diMK_80ckKTiDYYhCkLD1Q"
+        },
+        {
+            "species": "Big Cats",
+            "name": "Lion",
+            "size": "8 ft",
+            "location": "Africa",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXfYjLYjQg0_R2_WDIfvYcEQNrhyw8qx98_9JQHJYPYw17cVTcEfkkt4qSQ0aodBgEBP6vwHKHHRrqPBA8IUVKeeyT0MBKgJRmqCs9rWXKalNfFUCkIOr1Vsc6PgP2zXxXh8HryQlg?key=diMK_80ckKTiDYYhCkLD1Q"
+        },
+        {
+            "species": "Big Cats",
+            "name": "Leopard",
+            "size": "5 ft",
+            "location": "Africa and Asia",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXeMSoj7bSgjY2VlH8HA9tgHB9LurgQporMtJnoI1H8MPN7PbY7p_Gx2rjeuivBXkrjVLg0y0BB8DOBpAKUYjI2bXMCRUAHAzm2DLhJYJOYEh8HaEt2j4hPT7wyWkivAWKSkhA-a?key=diMK_80ckKTiDYYhCkLD1Q"
+        },
+        {
+            "species": "Big Cats",
+            "name": "Cheetah",
+            "size": "5 ft",
+            "location": "Africa",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXfc1Zm-8o90y67JK1gU9CLYY2VSfOday2thBYUVQLwFy-jMI58eqJEINT6pObI_KjnFQlm_NWqT3nBygv6lpseLTOtE-DPr3d7yXZD57seTY46qrNoKABPAvCw-HUis5bzS02Mi9w?key=diMK_80ckKTiDYYhCkLD1Q"
+        },
+        {
+            "species": "Big Cats",
+            "name": "Caracal",
+            "size": "3 ft",
+            "location": "Africa",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXdxccyHmmmT20yhdWWXlt3GIEZzyHQDgW76Sv57k2VWv1rdrXFYWNZoJXCsWMzho3FBV8ljGQurNpWLQSK5Lk0sTTYcIKe52g5kGl2A3Qyjpigo7txGQT77qhbi3TwZ02MpHxcLNw?key=diMK_80ckKTiDYYhCkLD1Q"
+        },
+        {
+            "species": "Big Cats",
+            "name": "Jaguar",
+            "size": "5 ft",
+            "location": "Amazon",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXcPzsAxcRbi2VIT_pbSVOUEcxaWclh_NkZOnWXZI2d6U6n0U0swjY7lBgnnuNdPd8NAEK1yTxkkSADg3UaqnOaNo9TdnhcqlTG_jsaz3R4hzOYTukc2XLYnjkJNdCi6fLuhrlY21A?key=diMK_80ckKTiDYYhCkLD1Q"
+        }
+    ],
+    "Dogs": [
+        {
+            "species": "Dog",
+            "name": "Rottweiler",
+            "size": "2 ft",
+            "location": "Germany",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXezPsZAeZBtpsk43At_GmgbFpr8qrcRReQoH4XKXkxUaFLMDqRRJVLr0LwzSke2YDPYv2iumlGyEPu7cownvblUGJhHUz5vrd2e7sSHEGXAGygjjfEe-T6Q-yo-RjaUcxtjOO_s?key=diMK_80ckKTiDYYhCkLD1Q"
+        },
+        {
+            "species": "Dog",
+            "name": "German Shepherd",
+            "size": "2 ft",
+            "location": "Germany",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXfwMItlotMw_ryxi-rv3TKh2CObExG8QzZaQtcqW6lEJHQBpy9UtRnqtqKE0mWYeoH5v4ZjiJZcfUWe-4QzuWi0t7-qZ88SzpkDdKN7IC8X_y6GkrZLOei10n6laogI9Io6rgqKhQ?key=diMK_80ckKTiDYYhCkLD1Q"
+        },
+        {
+            "species": "Dog",
+            "name": "Labrador",
+            "size": "2 ft",
+            "location": "UK",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXcDEY7V84TCWk-ObKKwI5ft1jC69CO3tiay2zcEj6CNsExeoKKub79rAHm_Eurhw1vrg9kTgcGzvHbtC7sIFOITPtgfcQSSiFDLrbEFk-6aSN-oCJX_1eerpoRspoJk5fdeelrYTQ?key=diMK_80ckKTiDYYhCkLD1Q"
+        },
+        {
+            "species": "Dog",
+            "name": "Alabai",
+            "size": "4 ft",
+            "location": "Turkey",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXeVEfG5ncvwTRQJtAhW8gZFGI9t1wqPdN6JojxFok_XoPWTBINzEq1aE0kEFSXumDMCweFGncUFOySHjdlevjx3_EA6hd5yKoSQUfHe1a-GZSuL5jW7m749EaMka6Wh5xgG82yamg?key=diMK_80ckKTiDYYhCkLD1Q"
+        }
+    ],
+    "BigFish": [
+        {
+            "species": "Big Fish",
+            "name": "Humpback Whale",
+            "size": "15 ft",
+            "location": "Atlantic Ocean",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXeUJ2ElF1c_j1k-ry488sMFboezLq6QLhHGIRtNcTnbHDSZ6fQT4tC02HicpxzXRolKCzRU3e4roHUzJUTcTGh229Uul05QWxjIvt_0FIy9-jR_piyrwLzDyXKtieDgbyovRTFXfA?key=diMK_80ckKTiDYYhCkLD1Q"
+        },
+        {
+            "species": "Big Fish",
+            "name": "Killer Whale",
+            "size": "12 ft",
+            "location": "Atlantic Ocean",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXcI4Q9Yv69yW2Hq27kf2Hz9vek4gdtP5KXnAe78FbZioKPbkvCMOG8oikgZeIyRo1f2rA7mvCLHqP0SZz1nhFdEVRfKTRtdG7Bvtggk3b8BWqBiHVA2FkytuFXQ1uUVy3NWCbmH?key=diMK_80ckKTiDYYhCkLD1Q"
+        },
+        {
+            "species": "Big Fish",
+            "name": "Tiger Shark",
+            "size": "8 ft",
+            "location": "Ocean",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXc_qbFlc4xURrnMzBaEqLCWzQZd7VKa92IubK-fg9BrmLNCAkbW23oLY3hfy_-FQ_PQUCEwChclVFX06dwYHiIVHscRjLS41fo8Y1zNqIrh9qC19Xtt3-LVbYwBYNZGRYQPf2JH?key=diMK_80ckKTiDYYhCkLD1Q"
+        },
+        {
+            "species": "Big Fish",
+            "name": "Hammerhead Shark",
+            "size": "8 ft",
+            "location": "Ocean",
+            "image":"https://lh7-rt.googleusercontent.com/docsz/AD_4nXfBtDGPc7-Aeti7Wy6RhydQ5n1FJ3zXCgxLDK05NrukFeTC-d3a5X0iQBLCttFhH2ugNtGNTl3JkLUaYV65tpgqlptle2oNP75pInEgS0_LGrSMl0-TnVwzXu9cRRC8t2qZTxY0?key=diMK_80ckKTiDYYhCkLD1Q"
+        }
+    ]
+}
+
+
+        function initializeData() {
+            for (const [category, animals] of Object.entries(data)) {
+                //map through all new animals generated
+                categories[category] = animals.map(
+                    (a) => new Animal(a.species, a.name, a.size, a.location, a.image)
+                );
+            }
+            renderAllCategory();
+        }
+
+        initializeData();
+    </script>
+</body>
+</html>
